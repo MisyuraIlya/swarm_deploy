@@ -1,0 +1,9 @@
+---
+- name: Test connection to all cluster nodes
+  hosts: cluster
+  gather_facts: false
+
+  tasks:
+    - name: Ping nodes
+    # built-in ping module, just checks SSH + Python
+      ansible.builtin.ping:

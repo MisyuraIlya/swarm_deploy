@@ -7,7 +7,7 @@ Vagrant.configure("2") do |config|
 			web.vm.hostname = "server#{i}"
 
 			web.vm.provision "shell" do |s|
-				ssh_pub_key = File.read("#{Dir.home}/.ssh/id_ed25519.pub").strip
+				ssh_pub_key = File.read("/home/spetsar/projects/swarm_deploy/local_id_ed25519.pub").strip
 				s.inline = <<-SHELL
 				echo #{ssh_pub_key} >> /home/vagrant/.ssh/authorized_keys
 				echo #{ssh_pub_key} >> /root/.ssh/authorized_keys
