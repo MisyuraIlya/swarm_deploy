@@ -1,4 +1,4 @@
-[cluster]
+[clusters]
 server1 ansible_host=192.168.1.92 ansible_port=2223 ansible_user=vagrant
 server2 ansible_host=192.168.1.92 ansible_port=2224 ansible_user=vagrant
 server3 ansible_host=192.168.1.92 ansible_port=2225 ansible_user=vagrant
