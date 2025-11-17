@@ -1,0 +1,79 @@
+version: "3.8"
+
+secrets:
+  db_user:
+    file: ./secrets/db_user.txt
+  db_password:
+    file: ./secrets/db_password.txt
+  db_name:
+    file: ./secrets/db_name.txt
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      # For simplicity, we still pass these as env to postgres.
+      # You can later change to *_FILE if the image supports it.
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: appdb
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - app-net
+    deploy:
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
+
+  backend:
+    # IMPORTANT: docker stack does NOT build images; build this first:
+    #   docker build -t swarm_demo-backend:latest ./backend
+    image: swarm_demo-backend:latest
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_SSLMODE: disable
+
+      # paths where swarm will mount the secrets
+      DB_USER_FILE: /run/secrets/db_user
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      DB_NAME_FILE: /run/secrets/db_name
+    secrets:
+      - db_user
+      - db_password
+      - db_name
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"   
+    networks:
+      - app-net
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+  frontend:
+    # Build first:
+    #   docker build -t swarm_demo-frontend:latest ./frontend
+    image: swarm_demo-frontend:latest
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - app-net
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+networks:
+  app-net:
+    driver: overlay
+
+volumes:
+  db-data:

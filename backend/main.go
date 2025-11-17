@@ -56,7 +56,6 @@ func main() {
 	mux.HandleFunc("/api/health", app.handleHealth)
 	mux.HandleFunc("/api/items", app.handleItems)
 
-	// CORS for frontend on different port
 	handler := withCORS(mux)
 
 	srv := &http.Server{
@@ -74,12 +73,12 @@ func main() {
 }
 
 func buildDSNFromEnv() string {
-	host := getEnv("DB_HOST", "localhost")
-	port := getEnv("DB_PORT", "5432")
-	user := getEnv("DB_USER", "app")
-	password := getEnv("DB_PASSWORD", "secret")
-	dbName := getEnv("DB_NAME", "appdb")
-	sslmode := getEnv("DB_SSLMODE", "disable")
+	host := getEnvOrFile("DB_HOST", "localhost")
+	port := getEnvOrFile("DB_PORT", "5432")
+	user := getEnvOrFile("DB_USER", "app")
+	password := getEnvOrFile("DB_PASSWORD", "secret")
+	dbName := getEnvOrFile("DB_NAME", "appdb")
+	sslmode := getEnvOrFile("DB_SSLMODE", "disable")
 
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
@@ -92,12 +91,22 @@ func buildDSNFromEnv() string {
 	)
 }
 
-func getEnv(key, def string) string {
-	val := os.Getenv(key)
-	if val == "" {
-		return def
+func getEnvOrFile(key, def string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
 	}
-	return val
+
+	if filePath := os.Getenv(key + "_FILE"); filePath != "" {
+		data, err := os.ReadFile(filePath)
+		if err == nil {
+			s := strings.TrimSpace(string(data))
+			if s != "" {
+				return s
+			}
+		}
+	}
+
+	return def
 }
 
 func migrate(db *sql.DB) error {
@@ -132,7 +141,6 @@ func (a *App) handleItems(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		a.createItem(w, r)
 	case http.MethodOptions:
-		// handled by CORS middleware, but OK to return 200 here
 		w.WriteHeader(http.StatusNoContent)
 	default:
 		w.Header().Set("Allow", "GET, POST, OPTIONS")
@@ -205,10 +213,9 @@ func (a *App) listItems(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(items)
 }
 
-// very simple CORS for demo (ok for learning, tighten in real prod)
 func withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// For learning: allow everything. In real app, restrict origin.
+		// For learning: allow everything.
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		w.Header().Set("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
